@@ -2,6 +2,7 @@ import './style.css'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import * as dat from 'dat.gui'
+import * as Stats from 'stats.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader'
 
@@ -9,9 +10,15 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader'
  * Base
  */
 // Debug
-const gui = new dat.GUI()
-// gui.hide()
+const gui = new dat.GUI({width : 300})
+gui.close()
 const debugObject = {}
+
+//show fps
+var stats = new Stats();
+stats.showPanel( 1 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+document.body.appendChild( stats.dom );
+
 
 // Canvas
 const canvas = document.querySelector('canvas.webgl')
@@ -88,9 +95,9 @@ directionalLight.shadow.mapSize.set(1024, 1024)
 scene.add(directionalLight)
 
 gui.add(directionalLight, 'intensity').min(0).max(10).step(0.001).name('lightIntensity')
-gui.add(directionalLight.position, 'x').min(- 50).max(50).step(0.001).name('lightX')
-gui.add(directionalLight.position, 'y').min(- 50).max(50).step(0.001).name('lightY')
-gui.add(directionalLight.position, 'z').min(- 50).max(50).step(0.001).name('lightZ')
+gui.add(directionalLight.position, 'x').min(- 50).max(50).step(0.001).name('light Position X')
+gui.add(directionalLight.position, 'y').min(- 50).max(50).step(0.001).name('light Position Y')
+gui.add(directionalLight.position, 'z').min(- 50).max(50).step(0.001).name('light Position Z')
 
 /**
  * raycasters
@@ -123,7 +130,7 @@ let mixer = null
 let action = null
 
 gltfLoader.load(
-    '/models/worn_out_pokeball/scene.gltf',  ///models/FlightHelmet/glTF/FlightHelmet.gltf
+    '/models/worn_out_pokeball/scene.gltf',  
     (gltf)=>{
         //pokeball
         gltf.scene.scale.set(3, 3, 3)
@@ -131,23 +138,17 @@ gltfLoader.load(
         gltf.scene.rotation.y = -0.7
         scene.add(gltf.scene)
 
-        // gltf.scene.scale.set(3,3,3)
-        // gltf.scene.position.set(0, -3, 0)
-        // scene.add(gltf.scene)
-
-        console.log(gltf);
-
         mixer = new THREE.AnimationMixer(gltf.scene)
         action = mixer.clipAction(gltf.animations[0])
         action.play()
         action.paused  = true
 
         updateAllMaterials()
-        gui.add(gltf.scene.rotation, 'y').min(- Math.PI).max(Math.PI).step(0.001).name('rotation')
-        gui.add(gltf.scene.rotation, 'z').min(- Math.PI).max(Math.PI).step(0.001).name('rotation')
-        gui.add(gltf.scene.scale,'x').min(-50).max(50).step(0.001)
-        gui.add(gltf.scene.scale,'y').min(-50).max(50).step(0.001)
-        gui.add(gltf.scene.scale,'z').min(-50).max(50).step(0.001)
+        // gui.add(gltf.scene.rotation, 'y').min(- Math.PI).max(Math.PI).step(0.001).name('rotation')
+        // gui.add(gltf.scene.rotation, 'z').min(- Math.PI).max(Math.PI).step(0.001).name('rotation')
+        // gui.add(gltf.scene.scale,'x').min(-50).max(50).step(0.001)
+        // gui.add(gltf.scene.scale,'y').min(-50).max(50).step(0.001)
+        // gui.add(gltf.scene.scale,'z').min(-50).max(50).step(0.001)
     }
 )
 //catch whether mouse click the ball or not
@@ -195,13 +196,11 @@ camera.position.set(-13.3, 0.7,  7.24)
 camera.rotation.set(0,0,0)
 scene.add(camera)
 
-gui.add(camera.position,'x').min(-50).max(50).step(0.001)
-gui.add(camera.position,'y').min(-50).max(50).step(0.001)
-gui.add(camera.position,'z').min(-50).max(50).step(0.001)
-
 // Controls
 const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
+controls.enableZoom = false
+controls.enablePan = false
 
 /**
  * Renderer
@@ -218,20 +217,21 @@ renderer.outputEncoding = THREE.sRGBEncoding
 renderer.toneMapping = THREE.ReinhardToneMapping
 renderer.toneMappingExposure = 3
 
-gui
-    .add(renderer,'toneMapping',{
-        No: THREE.NoToneMapping,
-        Linear: THREE.LinearToneMapping,
-        Reinhard: THREE.ReinhardToneMapping,
-        Cineon: THREE.CineonToneMapping,
-        ACESFilmic: THREE.ACESFilmicToneMapping
-    })
-    .onFinishChange(()=>{
-        renderer.toneMapping = Number(renderer.toneMapping)
-        updateAllMaterials()
-    })
+//add to debug panel
+// gui
+//     .add(renderer,'toneMapping',{
+//         No: THREE.NoToneMapping,
+//         Linear: THREE.LinearToneMapping,
+//         Reinhard: THREE.ReinhardToneMapping,
+//         Cineon: THREE.CineonToneMapping,
+//         ACESFilmic: THREE.ACESFilmicToneMapping
+//     })
+//     .onFinishChange(()=>{
+//         renderer.toneMapping = Number(renderer.toneMapping)
+//         updateAllMaterials()
+//     })
 
-gui.add(renderer,'toneMappingExposure').min(0).max(10).step(0.001).name('ToneMapping Exposure')
+// gui.add(renderer,'toneMappingExposure').min(0).max(10).step(0.001).name('ToneMapping Exposure')
 
 const clock = new THREE.Clock()
 let currentTime = 0
@@ -241,6 +241,8 @@ let currentTime = 0
  */
 const tick = () =>
 { 
+    stats.begin();
+
     const elapsedTime = clock.getElapsedTime()
     const deltaTime = elapsedTime - currentTime
     currentTime = elapsedTime
@@ -259,10 +261,10 @@ const tick = () =>
         mixer.update(deltaTime)
     }
 
-
-
     // Render
     renderer.render(scene, camera)
+
+    stats.end();
 
     // Call tick again on the next frame
     window.requestAnimationFrame(tick)
